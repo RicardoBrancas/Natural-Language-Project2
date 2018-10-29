@@ -8,6 +8,15 @@ import csv
 from sklearn.preprocessing import normalize
 import argparse
 import sklearn.metrics.pairwise
+import re
+
+def replaceNames(sentence, oldNames, newName):
+    for name in oldNames:
+        if name and len(name[0]) > 0:
+            if(name[0] in sentence):
+                sentence = re.sub(r'\b' + name[0] + r'\b', " " + newName + " ", sentence)
+    return sentence
+    
 
 model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
 
@@ -20,21 +29,38 @@ args = parser.parse_args()
 classes = {}
 obs = {}
 
+movieNames = list(csv.reader(open('recursos/list_movies.txt'), delimiter='\t'))
+characterNames = list(csv.reader(open('recursos/list_characters.txt'), delimiter='\t'))
+companyNames = list(csv.reader(open('recursos/list_companies.txt'), delimiter='\t'))
+genreNames = list(csv.reader(open('recursos/list_genres.txt'), delimiter='\t'))
+jobNames = list(csv.reader(open('recursos/list_jobs.txt'), delimiter='\t'))
+peopleNames = list(csv.reader(open('recursos/list_people.txt'), delimiter='\t'))
+
 with open(args.train_file, 'r') as file:
     reader = csv.reader(file, delimiter='\t')
 
     for row in reader:
         category = row[0]
         line = row[1]
+
+        #Replace key words
+        line = replaceNames(line, movieNames, 'movie')
+        line = replaceNames(line, characterNames, 'character')
+        line = replaceNames(line, genreNames, 'genre')
+        line = replaceNames(line, jobNames, 'job')
+        line = replaceNames(line, peopleNames, 'person')
+
         tokenizer = RegexpTokenizer(r'[A-Za-z]+')
         tokens = tokenizer.tokenize(line)
 
         sb = np.zeros((300))
         filtered_words = filter(lambda token: token not in stopwords.words('english'), tokens)
         for token in filtered_words:
-            sb += model[token]
-
-        sb = sb / np.linalg.norm(sb)
+            if token in model:
+                sb += model[token]
+        norm = np.linalg.norm(sb)
+        if norm != 0:
+            sb = sb / np.linalg.norm(sb)
        
         if category in classes:
             classes[category] += sb
@@ -51,6 +77,14 @@ with open(args.test_file, 'r') as file:
 
     for row in reader:
         line = row[0]
+
+        #Replace key words
+        line = replaceNames(line, movieNames, 'movie')
+        line = replaceNames(line, characterNames, 'character')
+        line = replaceNames(line, genreNames, 'genre')
+        line = replaceNames(line, jobNames, 'job')
+        line = replaceNames(line, peopleNames, 'person')
+
         tokenizer = RegexpTokenizer(r'[A-Za-z]+')
         tokens = tokenizer.tokenize(line)
 
@@ -58,9 +92,12 @@ with open(args.test_file, 'r') as file:
 
         filtered_words = filter(lambda token: token not in stopwords.words('english'), tokens)
         for token in filtered_words:
-            sb += model[token]
+            if token in model:
+                sb += model[token]
 
-        sb = sb / np.linalg.norm(sb)
+        norm = np.linalg.norm(sb)
+        if norm != 0:
+            sb = sb / np.linalg.norm(sb)
 
         max_key = None
         max_similarity = 0

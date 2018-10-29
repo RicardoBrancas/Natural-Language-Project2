@@ -1,3 +1,5 @@
+#!/bin/python
+
 import sklearn.metrics
 from csv import reader
 import argparse

@@ -1,14 +1,15 @@
 #!/bin/python3
 
+import argparse
+import re
+import csv
+
 import numpy as np
 import gensim
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
-import csv
 from sklearn.preprocessing import normalize
-import argparse
-import sklearn.metrics.pairwise
-import re
+from sklearn.metrics.pairwise import cosine_similarity
 
 parser = argparse.ArgumentParser(description='Classificador de perguntas relacionadas com cinema.')
 parser.add_argument('train_file', metavar='TRAINING')
@@ -29,7 +30,6 @@ peopleNames = list(csv.reader(open('recursos/list_people.txt'), delimiter='\t'))
 tokenizer = RegexpTokenizer(r'[A-Za-z]+')
 model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
 
-
 def replaceNames(sentence, oldNames, newName):
     for name in oldNames:
         if name and len(name[0]) > 0:
@@ -40,7 +40,6 @@ def replaceNames(sentence, oldNames, newName):
 
 def process(line):
 
-    #Replace keywords
     line = replaceNames(line, movieNames, 'movie')
     line = replaceNames(line, characterNames, 'character')
     line = replaceNames(line, genreNames, 'genre')
@@ -90,7 +89,7 @@ with open(args.test_file, 'r') as file:
         max_key = None
         max_similarity = 0
         for category, value in classes.items():
-            similarity = sklearn.metrics.pairwise.cosine_similarity(value.reshape(1, -1), reshaped_sb)
+            similarity = cosine_similarity(value.reshape(1, -1), reshaped_sb)
 
             if similarity > max_similarity:
                 max_similarity = similarity
